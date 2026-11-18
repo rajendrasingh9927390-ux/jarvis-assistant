@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS 3.0 — Iron Man HUD</title>
+<style>
+:root{--cyan:#55e8ff;--blue:#159dcc;--dim:#5797ad;--bg:#030912;--panel:rgba(5,22,35,.82)}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 42%,#0b2b40 0,#061421 34%,#02070d 78%);color:#d9f8ff;font-family:Arial,sans-serif;min-height:100vh;padding:14px;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 39px,#39c9ed0a 40px),repeating-linear-gradient(90deg,transparent 0 39px,#39c9ed08 40px)}
+.app{max-width:1000px;margin:auto;position:relative}
+header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1a6680;padding:9px 3px 15px;gap:10px}
+.brand{display:flex;align-items:center;gap:11px}.mini{width:42px;height:42px;border:1px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-weight:bold;box-shadow:0 0 18px #37dfff66}
+h1{font-size:21px;letter-spacing:5px;color:var(--cyan);margin:0;text-shadow:0 0 12px #39dfff77}.sub{font-size:9px;letter-spacing:2px;color:#85b9ca;margin-top:5px}
+.live{font-size:10px;color:#73f4c0;border:1px solid #237e68;padding:7px 9px;border-radius:20px;white-space:nowrap}
+.topline{display:flex;justify-content:space-between;color:#73cde2;font-size:10px;letter-spacing:1.5px;padding:12px 2px}
+.main{display:grid;grid-template-columns:1fr;gap:13px}
+.hud{background:linear-gradient(145deg,#0a2334bb,#04101cdd);border:1px solid #17617b;border-radius:16px;padding:15px;box-shadow:0 0 25px #0a9bc522,inset 0 0 20px #0b7fa311}
+.reactor-area{display:flex;justify-content:center;align-items:center;padding:15px 0 18px}
+.reactor{width:min(66vw,270px);aspect-ratio:1;border-radius:50%;position:relative;display:grid;place-items:center}
+.ring{position:absolute;border-radius:50%;border:1px solid var(--cyan);inset:0;box-shadow:0 0 16px #2bdfff44,inset 0 0 16px #2bdfff22}
+.ring.r2{inset:9%;border:2px dashed #39cfff;animation:spin 18s linear infinite}
+.ring.r3{inset:19%;border:1px solid #1c91b9;box-shadow:0 0 22px #00bfff55}
+.ring.r4{inset:28%;border:2px solid #60eaff;border-top-color:transparent;border-bottom-color:transparent;animation:spin 7s linear infinite reverse}
+.core{width:34%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#eaffff 0,#6cecff 18%,#148db9 42%,#06253b 72%);box-shadow:0 0 20px #41e4ff,0 0 55px #12a9dc88;display:grid;place-items:center;color:#00121c;font-weight:bold;font-size:clamp(13px,4vw,22px);letter-spacing:2px}
+.tick{position:absolute;inset:3%;border-radius:50%;border:5px dotted #54dfff55}
+@keyframes spin{to{transform:rotate(360deg)}}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.metric{border:1px solid #17465c;background:#061522;padding:9px 5px;text-align:center;border-radius:9px}.metric b{display:block;color:var(--cyan);font-size:13px}.metric span{font-size:8px;color:#83aebe;letter-spacing:1px}
+.section-title{font-size:10px;color:var(--cyan);letter-spacing:2px;margin:0 0 10px}
+.chatbox{height:185px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.msg{max-width:92%;padding:9px 11px;border:1px solid #1b6178;border-radius:10px;background:#092338;font-size:12px;line-height:1.45}.msg.user{align-self:flex-end;background:#0b3448;border-color:#258ba9}.msg small{display:block;color:#55dfff;font-size:9px;letter-spacing:1px;margin-bottom:3px}
+.entry{display:flex;gap:7px}.entry input{flex:1;min-width:0;background:#020d17;border:1px solid #1c6178;color:white;border-radius:9px;padding:11px;font-size:13px;outline:none}
+button{background:#08283a;color:#dffaff;border:1px solid #35cde9;border-radius:9px;padding:10px 12px;font-weight:bold;font-size:10px;letter-spacing:1px}button.primary{background:#19a9cc;color:#00121a;box-shadow:0 0 12px #12bde955}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.modules{display:grid;grid-template-columns:1fr 1fr;gap:8px}.module{border:1px solid #16475e;background:#061522;border-radius:9px;padding:10px;font-size:11px;color:#a9d7e4}.module b{display:block;color:#5be5ff;font-size:10px;margin-bottom:5px}
+.note{color:#7298a9;font-size:10px;line-height:1.5;margin:12px 0 0}
+footer{text-align:center;color:#47798e;font-size:9px;letter-spacing:2px;padding:16px}
+@media(min-width:720px){.main{grid-template-columns:1fr 1fr}.reactor{width:260px}.chatbox{height:250px}}
+</style></head>
+<body><div class="app">
+<header><div class="brand"><div class="mini">J</div><div><h1>J.A.R.V.I.S</h1><div class="sub">STARK INDUSTRIES · PERSONAL AI INTERFACE</div></div></div><div class="live">● SYSTEM ONLINE</div></header>
+<div class="topline"><span>HOLOGRAPHIC CONTROL SYSTEM</span><span id="clock">--:--:--</span></div>
+<div class="main">
+<section class="hud">
+<div class="section-title">◈ ARC REACTOR CORE</div>
+<div class="reactor-area"><div class="reactor"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="ring r4"></div><div class="tick"></div><div class="core">J.A.R.V.I.S</div></div></div>
+<div class="metrics"><div class="metric"><b>ONLINE</b><span>CORE STATUS</span></div><div class="metric"><b>3.0</b><span>VERSION</span></div><div class="metric"><b>READY</b><span>INTERFACE</span></div></div>
+<p class="note">Visual interface preview. The animated reactor is decorative; no real system scanning is taking place.</p>
+</section>
+<section class="hud">
+<div class="section-title">◈ JARVIS COMMUNICATION</div>
+<div class="chatbox" id="chat"><div class="msg"><small>JARVIS · DEMO</small>Good evening, sir. JARVIS 3.0 interface is online. AI brain is not connected yet.</div></div>
+<div class="entry"><input id="message" placeholder="Enter your command..." autocomplete="off"><button class="primary" id="send">SEND</button></div>
+<div class="actions"><button id="mic">🎙 VOICE INPUT</button><button id="clear">CLEAR CHAT</button></div>
+<p class="note" id="voiceNote">You can type messages now. Voice input works only if your browser supports speech recognition.</p>
+</section>
+</div>
+<section class="hud" style="margin-top:13px"><div class="section-title">◈ SYSTEM MODULES</div><div class="modules">
+<div class="module"><b>01 / VOICE INTERFACE</b>Browser voice input preview</div><div class="module"><b>02 / CHAT MODULE</b>Visual conversation panel</div><div class="module"><b>03 / ARC REACTOR</b>Animated HUD centerpiece</div><div class="module"><b>04 / AI BRAIN</b>Not connected — future supervised setup</div>
+</div><p class="note">Security: never place API keys in this HTML file or a public GitHub repository. A real AI connection needs a secure backend and an appropriately supervised account setup.</p></section>
+<footer>JARVIS 3.0 · STARK-INSPIRED HUD · INTERFACE PREVIEW</footer></div>
+<script>
+const chat=document.getElementById('chat'),field=document.getElementById('message');
+function add(t,k){let d=document.createElement('div');d.className='msg '+(k||'');let s=document.createElement('small');s.textContent=k==='user'?'YOU':'JARVIS · DEMO';d.append(s,document.createTextNode(t));chat.append(d);chat.scrollTop=chat.scrollHeight}
+function send(){let t=field.value.trim();if(!t)return;add(t,'user');field.value='';setTimeout(()=>add('Sir, the interface is working, but the AI brain is not connected yet. This preview cannot answer open-ended questions.'),220)}
+document.getElementById('send').onclick=send;field.addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+document.getElementById('clear').onclick=()=>{chat.innerHTML='';add('Conversation cleared. AI brain is not connected yet.')};
+function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-IN')}tick();setInterval(tick,1000);
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition,btn=document.getElementById('mic');
+if(SR){let r=new SR();r.lang='hi-IN';r.onresult=e=>{field.value=e.results[0][0].transcript;send()};r.onerror=()=>document.getElementById('voiceNote').textContent='Voice input error. Please type your message.';btn.onclick=()=>{try{r.start();document.getElementById('voiceNote').textContent='Listening...'}catch(e){}}}
+else{btn.disabled=true;document.getElementById('voiceNote').textContent='Speech recognition not supported in this browser. Type instead.'}
+</script></body></html>
