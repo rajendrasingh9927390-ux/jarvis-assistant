@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#071426">
+<title>JARVIS 2.0 — Offline Assistant</title>
+<style>
+:root{color-scheme:dark;--bg:#071426;--panel:#10243b;--cyan:#75dcff;--muted:#9bb6cc}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 15%,#123b5a,#091a2d 42%,#050d18);font-family:Arial,sans-serif;color:#eaf7ff;display:flex;justify-content:center}
+main{width:min(100%,580px);padding:20px 16px 36px;display:flex;flex-direction:column;gap:14px}
+header{display:flex;justify-content:space-between;align-items:center}h1{margin:0;letter-spacing:4px;color:var(--cyan);font-size:25px}.status{font-size:11px;color:#8ff0bf;border:1px solid #27684e;border-radius:20px;padding:7px 10px}
+.sub{text-align:center;color:var(--muted);font-size:12px}.orb-wrap{display:flex;justify-content:center;padding:10px 0}.orb{width:150px;height:150px;border-radius:50%;border:1px solid #55cfff;display:grid;place-items:center;background:radial-gradient(circle,#1a6388,#123b5b 42%,#071426 72%);box-shadow:0 0 25px #1a9ed966,inset 0 0 30px #54d4ff55;position:relative}.orb:before,.orb:after{content:"";position:absolute;border:1px solid #55cfff88;border-radius:50%;inset:-10px;animation:pulse 3s infinite}.orb:after{inset:-19px;opacity:.4;animation-delay:1s}.orb span{font-size:36px;color:#b8f0ff;text-shadow:0 0 20px #65dfff}@keyframes pulse{50%{transform:scale(1.06);opacity:.2}}
+.card{background:#0d2035eF;border:1px solid #23445f;border-radius:15px;padding:14px}.label{font-size:11px;letter-spacing:1.4px;color:var(--cyan);font-weight:bold;margin-bottom:8px}#reply{min-height:45px;line-height:1.5;font-size:15px}#heard{color:#b7cddd;min-height:20px;font-size:13px}
+.controls,.entry{display:flex;gap:8px}button{border:0;border-radius:11px;padding:13px 12px;font-size:14px;font-weight:bold;cursor:pointer}#mic{flex:1;background:linear-gradient(135deg,#1677a4,#16476c);color:white}#stop{background:#263b50;color:#e7f5ff}#send{background:#d5f5ff;color:#092036}button:disabled{opacity:.5}
+input,select{min-width:0;background:#071426;border:1px solid #31536d;border-radius:10px;padding:12px;color:white;font-size:14px}#typed{flex:1}.small{font-size:12px;color:var(--muted);line-height:1.5}.taskrow{display:flex;gap:8px;margin-top:8px;align-items:center}.taskrow span{flex:1;overflow-wrap:anywhere}.taskrow button{padding:7px 10px;background:#263b50;color:white}.taskrow.done span{text-decoration:line-through;color:#7892a8}
+footer{text-align:center;color:#6f91aa;font-size:11px}
+</style>
+</head>
+<body><main>
+<header><h1>J.A.R.V.I.S</h1><div class="status">● OFFLINE MODE</div></header>
+<div class="sub">PERSONAL ASSISTANT · VERSION 2.0</div>
+<div class="orb-wrap"><div class="orb"><span>J</span></div></div>
+<section class="card"><div class="label">JARVIS</div><div id="reply" aria-live="polite">Good day, Sir. I am ready. Aap Hindi ya English mein command de sakte hain.</div></section>
+<section class="card"><div class="label">WHAT I HEARD</div><div id="heard">Waiting for your command…</div></section>
+<div class="controls"><button id="mic">🎙 Speak to JARVIS</button><button id="stop">■ Stop</button></div>
+<div class="entry"><input id="typed" placeholder="Try: help, time, plan, add task..." autocomplete="off"><button id="send">Send</button></div>
+<section class="card"><div class="label">MY TASKS</div><div class="entry"><input id="taskInput" placeholder="Add a task"><button id="addTask">Add</button></div><div id="tasks" class="small" style="margin-top:8px">No tasks yet.</div></section>
+<section class="card small"><b>Try saying:</b><br>“Hello JARVIS” · “Time batao” · “Aaj ki date” · “Help” · “Plan my day” · “Add task study physics” · “Show my tasks”<br><br>Note: This is an offline command-based prototype, not a connected generative AI. Speech recognition may need internet and browser support.</section>
+<footer>JARVIS 2.0 · YOUR PERSONAL SYSTEM</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id), reply=$('reply'),heard=$('heard');
+function speak(t){reply.textContent=t;if(!('speechSynthesis'in window))return; speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='en-IN';u.rate=.91;u.pitch=.78;let vs=speechSynthesis.getVoices();let v=vs.find(x=>/en-IN/i.test(x.lang))||vs.find(x=>/en/i.test(x.lang));if(v)u.voice=v;speechSynthesis.speak(u)}
+function getTasks(){try{return JSON.parse(localStorage.getItem('jarvis_tasks')||'[]')}catch(e){return []}}
+function saveTasks(a){localStorage.setItem('jarvis_tasks',JSON.stringify(a));renderTasks()}
+function renderTasks(){let a=getTasks();$('tasks').innerHTML='';if(!a.length){$('tasks').textContent='No tasks yet.';return}a.forEach((t,i)=>{let d=document.createElement('div');d.className='taskrow'+(t.done?' done':'');let s=document.createElement('span');s.textContent=(i+1)+'. '+t.text;let b=document.createElement('button');b.textContent=t.done?'Undo':'Done';b.onclick=()=>{let x=getTasks();x[i].done=!x[i].done;saveTasks(x)};let r=document.createElement('button');r.textContent='×';r.onclick=()=>{let x=getTasks();x.splice(i,1);saveTasks(x)};d.append(s,b,r);$('tasks').append(d)})}
+function addTask(t){t=(t||'').trim();if(!t){speak('Sir, please tell me the task.');return}let a=getTasks();a.push({text:t,done:false});saveTasks(a);$('taskInput').value='';speak('Task added: '+t)}
+$('addTask').onclick=()=>addTask($('taskInput').value);
+function handle(raw){let q=raw.toLowerCase().trim();heard.textContent=raw;if(!q)return;
+if(/hello|hi|hey|namaste|नमस्ते|प्रणाम/.test(q))return speak('Hello, Sir. JARVIS version two is ready.');
+if(/time|samay|समय|kitne baje|कितने बजे/.test(q))return speak('Sir, the time is '+new Date().toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'}));
+if(/date|today|tarikh|tareekh|तारीख|आज की तारीख/.test(q))return speak('Today is '+new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
+if(/show.*task|my tasks|tasks dikhao|मेरे काम|टास्क दिखाओ/.test(q)){let a=getTasks();return speak(a.length?'You have '+a.filter(x=>!x.done).length+' pending tasks. '+a.map((x,i)=>'Task '+(i+1)+': '+x.text+(x.done?' completed.':'.')).join(' '):'Sir, you have no saved tasks.')}
+if(/add task|task add|याद रखो|काम जोड़ो/.test(q)){let t=raw.replace(/.*?(add task|task add|याद रखो|काम जोड़ो)/i,'').trim();return addTask(t)}
+if(/plan my day|plan today|aaj ka plan|आज का प्लान|दिन का प्लान/.test(q))return speak('Sir, tell me your top three priorities. You can add each one by saying: add task, followed by your task.');
+if(/help|madad|commands|मदद/.test(q))return speak('You can ask me the time and date, say plan my day, add a task, or show my tasks. Your tasks stay saved in this browser on this device.');
+if(/stop|quiet|chup|बंद/.test(q)){speechSynthesis.cancel();reply.textContent='Voice stopped, Sir.';return}
+return speak('Sir, I heard: '+raw+'. This offline version has limited commands. For open-ended answers, a supervised AI connection will be needed in a later version.');
+}
+$('send').onclick=()=>{let v=$('typed').value;$('typed').value='';handle(v)};$('typed').addEventListener('keydown',e=>{if(e.key==='Enter')$('send').click()});
+$('stop').onclick=()=>{if('speechSynthesis'in window)speechSynthesis.cancel();if(window.recognition)window.recognition.stop()};
+let SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SR){let rec=new SR();window.recognition=rec;rec.lang='hi-IN';rec.interimResults=false;rec.maxAlternatives=1;rec.onstart=()=>{$('mic').textContent='🎙 Listening…';$('mic').disabled=true};rec.onend=()=>{$('mic').textContent='🎙 Speak to JARVIS';$('mic').disabled=false};rec.onerror=e=>{heard.textContent='Voice input error: '+e.error+'. Type a command if needed.'};rec.onresult=e=>handle(e.results[0][0].transcript);$('mic').onclick=()=>{try{rec.start()}catch(e){heard.textContent='Please wait and try again.'}}}else{$('mic').onclick=()=>{heard.textContent='Speech recognition is not supported in this browser. Please type a command.'}}
+renderTasks();if('speechSynthesis'in window)speechSynthesis.getVoices();
+</script></body></html>
