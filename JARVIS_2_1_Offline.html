@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS 2.1</title>
+<style>
+:root{--bg:#050b16;--panel:#0b1728;--cyan:#37d9ff;--muted:#9bb3c9;--line:#173b55}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#102b45 0,#050b16 55%);color:#eaf8ff;font-family:Arial,sans-serif;padding:18px}
+.wrap{max-width:760px;margin:0 auto}
+header{text-align:center;padding:24px 10px}
+.logo{width:88px;height:88px;border:2px solid var(--cyan);border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;color:var(--cyan);font-size:30px;box-shadow:0 0 25px #37d9ff55}
+h1{margin:0;color:var(--cyan);letter-spacing:5px;font-size:30px}
+.sub{color:var(--muted);font-size:13px;margin-top:8px;letter-spacing:2px}
+.panel{background:#0b1728dd;border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 10px 35px #0005}
+.status{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;background:#48e69a;box-shadow:0 0 10px #48e69a}
+#conversation{height:230px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px}
+.msg{max-width:90%;padding:11px 13px;border-radius:13px;line-height:1.4;font-size:14px}
+.jarvis{align-self:flex-start;background:#102a40;border:1px solid #1d536f}
+.user{align-self:flex-end;background:#123d50;border:1px solid #247b99}
+.controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+button{border:1px solid var(--cyan);background:#09263a;color:#eaf8ff;border-radius:12px;padding:12px 15px;font-weight:bold;cursor:pointer}
+button.primary{background:var(--cyan);color:#00111a}
+button:active{transform:scale(.98)}
+input{flex:1;min-width:150px;background:#06111f;color:white;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:15px;outline:none}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+h3{color:var(--cyan);font-size:15px;margin:0 0 10px}
+ul{padding-left:20px;margin:8px 0}
+.task{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #17334a;font-size:14px}
+.task:last-child{border:0}
+.task button{padding:5px 9px;font-size:12px}
+.done{text-decoration:line-through;color:#7792a7}
+footer{text-align:center;color:#617f98;font-size:11px;padding:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo">J</div>
+  <h1>J.A.R.V.I.S</h1>
+  <div class="sub">PERSONAL OFFLINE COMMAND ASSISTANT · VERSION 2.1</div>
+</header>
+
+<div class="panel">
+  <div class="status"><span class="dot"></span><span id="status">SYSTEM READY</span></div>
+  <div id="conversation" aria-live="polite">
+    <div class="msg jarvis">Hello sir. Main JARVIS 2.1 hoon. Aap Hindi ya English mein supported commands bol sakte hain.</div>
+  </div>
+  <div class="controls">
+    <input id="command" type="text" placeholder="Type a command..." autocomplete="off">
+    <button class="primary" id="send">SEND</button>
+    <button id="mic">🎙 SPEAK</button>
+  </div>
+  <p class="small">Try: “Hello Jarvis”, “Time kya hua hai?”, “Aaj ki date batao”, “Add task study physics”, “Show tasks”, “Help”.</p>
+</div>
+
+<div class="panel">
+  <h3>MY TASKS</h3>
+  <div id="tasks"><p class="small">Abhi koi task nahi hai.</p></div>
+</div>
+
+<div class="panel">
+  <h3>SUPPORTED COMMANDS</h3>
+  <p class="small">Greeting · Time · Date · Add task · Show tasks · Clear completed tasks · Help</p>
+  <p class="small">Note: Ye free command-based prototype hai. Open-ended questions ka intelligent jawab dene ke liye AI connection/backend chahiye. Browser ka voice recognition kuch devices par internet maang sakta hai.</p>
+</div>
+<footer>JARVIS 2.1 · PERSONAL PROJECT</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const conversation = $('conversation');
+const input = $('command');
+let tasks = [];
+try { tasks = JSON.parse(localStorage.getItem('jarvis21_tasks') || '[]'); if(!Array.isArray(tasks)) tasks=[]; } catch(e){ tasks=[]; }
+
+function addMessage(text, who='jarvis'){
+  const div=document.createElement('div');
+  div.className='msg '+who;
+  div.textContent=text;
+  conversation.appendChild(div);
+  conversation.scrollTop=conversation.scrollHeight;
+}
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='hi-IN'; u.rate=0.96; u.pitch=0.95;
+  const voices=window.speechSynthesis.getVoices();
+  const voice=voices.find(v=>/hi-IN/i.test(v.lang)) || voices.find(v=>/en-IN/i.test(v.lang));
+  if(voice) u.voice=voice;
+  window.speechSynthesis.speak(u);
+}
+function reply(text){ addMessage(text,'jarvis'); speak(text); }
+function saveTasks(){ localStorage.setItem('jarvis21_tasks',JSON.stringify(tasks)); renderTasks(); }
+function renderTasks(){
+  const root=$('tasks'); root.innerHTML='';
+  if(!tasks.length){ root.innerHTML='<p class="small">Abhi koi task nahi hai.</p>'; return; }
+  tasks.forEach((task,index)=>{
+    const row=document.createElement('div'); row.className='task';
+    const label=document.createElement('span'); label.textContent=task.text; if(task.done) label.className='done';
+    const actions=document.createElement('span');
+    const done=document.createElement('button'); done.textContent=task.done?'UNDO':'DONE';
+    done.onclick=()=>{tasks[index].done=!tasks[index].done;saveTasks();};
+    const del=document.createElement('button'); del.textContent='DELETE';
+    del.onclick=()=>{tasks.splice(index,1);saveTasks();};
+    actions.append(done,del); row.append(label,actions); root.appendChild(row);
+  });
+}
+function normalize(s){
+ return s.toLowerCase().trim().replace(/[.,!?।]/g,'').replace(/\s+/g,' ');
+}
+function handleCommand(raw){
+ const text=normalize(raw);
+ if(!text) return;
+ addMessage(raw,'user');
+ let answer='';
+ const now=new Date();
+ const isGreeting=/\b(hello|hi|hey|namaste|namaskar|pranam)\b/.test(text) || /नमस्ते|नमस्कार|प्रणाम/.test(text);
+ const asksTime=/\b(time|samay|waqt)\b/.test(text) || /कितने बजे|समय बताओ|टाइम बताओ/.test(text);
+ const asksDate=/\b(date|today|tarikh|tareekh)\b/.test(text) || /आज की तारीख|तारीख बताओ|आज कौन सा दिन/.test(text);
+ const asksHelp=/\b(help|commands|command list)\b/.test(text) || /मदद|कमांड/.test(text);
+ const showTasks=/show tasks|my tasks|list tasks|tasks dikhao|task dikhao|मेरे टास्क|टास्क दिखाओ|काम दिखाओ/.test(text);
+ const clearDone=/clear completed|remove completed|completed hatao|पूरे हुए टास्क हटाओ/.test(text);
+ const addMatch=text.match(/^(?:please )?(?:add task|add a task|new task|task add karo|task jodo|टास्क जोड़ो|काम जोड़ो)\s*(.*)$/);
+ if(isGreeting){
+   answer='Hello sir! Main ready hoon. Aap time, date, tasks ya help command bol sakte hain.';
+ } else if(asksTime){
+   answer='Abhi time hai '+now.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'})+'.';
+ } else if(asksDate){
+   answer='Aaj '+now.toLocaleDateString('hi-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' hai.';
+ } else if(asksHelp){
+   answer='Main ye commands samajh sakta hoon: Hello Jarvis, time batao, date batao, add task ke baad task ka naam bolo, show tasks, aur clear completed tasks.';
+ } else if(showTasks){
+   if(!tasks.length) answer='Sir, abhi aapki task list khaali hai.';
+   else answer='Sir, aapke '+tasks.length+' tasks hain: '+tasks.map((t,i)=>(i+1)+'. '+t.text+(t.done?' completed':'' )).join('. ');
+ } else if(clearDone){
+   const before=tasks.length; tasks=tasks.filter(t=>!t.done); saveTasks();
+   answer=(before-tasks.length)+' completed tasks hata diye, sir.';
+ } else if(addMatch){
+   const taskName=addMatch[1].trim();
+   if(!taskName) answer='Task add karne ke liye bolo: Add task study physics.';
+   else {tasks.push({text:taskName,done:false});saveTasks();answer='Task add kar diya: '+taskName+'.';}
+ } else {
+   answer='Sorry sir, ye command mujhe samajh nahi aayi. Supported commands dekhne ke liye Help boliye.';
+ }
+ reply(answer);
+}
+function send(){const value=input.value.trim();if(!value)return;input.value='';handleCommand(value);}
+$('send').addEventListener('click',send);
+input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+renderTasks();
+
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recognition=null;
+if(SpeechRecognition){
+ recognition=new SpeechRecognition();
+ recognition.lang='hi-IN';
+ recognition.continuous=false;
+ recognition.interimResults=false;
+ recognition.onstart=()=>{$('status').textContent='LISTENING...';$('mic').textContent='LISTENING';};
+ recognition.onend=()=>{$('status').textContent='SYSTEM READY';$('mic').textContent='🎙 SPEAK';};
+ recognition.onerror=(e)=>{ $('status').textContent='MIC: '+e.error; reply('Sir, awaaz clear nahi mili. Dobara try karein ya command type karein.'); };
+ recognition.onresult=e=>{const heard=e.results[0][0].transcript;handleCommand(heard);};
+ $('mic').addEventListener('click',()=>{try{recognition.start();}catch(e){$('status').textContent='MIC ALREADY ACTIVE';}});
+}else{
+ $('mic').disabled=true;
+ $('status').textContent='VOICE NOT SUPPORTED — TYPE COMMANDS';
+}
+</script>
+</body>
+</html>
