@@ -1,4 +1,4 @@
-
+// JARVIS Gemini AI deployment
 const ALLOWED_ORIGIN =
   "https://rajendrasingh9927390-ux.github.io";
 
