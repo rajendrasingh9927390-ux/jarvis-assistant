@@ -1,1 +1,248 @@
 
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS 3.1</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:radial-gradient(circle,#092b40,#020812 65%);
+ color:#d9faff;font-family:Arial,sans-serif;
+ min-height:100vh;padding:16px
+}
+header{text-align:center;color:#48eaff;letter-spacing:4px;
+ padding:15px;border-bottom:1px solid #167c9b}
+h1{font-size:25px;text-shadow:0 0 15px #00d9ff}
+.status{color:#74ffcf;font-size:12px}
+.container{max-width:750px;margin:auto}
+.core{height:210px;display:grid;place-items:center}
+.arc{width:130px;height:130px;border:3px solid #36dfff;
+ border-radius:50%;display:grid;place-items:center;
+ box-shadow:0 0 25px #00cfff,inset 0 0 25px #00cfff;
+ animation:pulse 2s infinite}
+.arc span{font-size:24px;letter-spacing:3px}
+@keyframes pulse{50%{box-shadow:0 0 45px #00cfff,inset 0 0 40px #00cfff}}
+.panel{background:#061827e8;border:1px solid #167c9b;
+ border-radius:12px;padding:16px;margin:14px 0;
+ box-shadow:0 0 15px #001b2c}
+h2{font-size:14px;color:#48eaff;letter-spacing:2px}
+#chat{height:230px;overflow:auto;background:#020a12;
+ border:1px solid #16465b;border-radius:8px;padding:12px;
+ font-size:14px;line-height:1.5}
+.msg{margin:0 0 12px;white-space:pre-wrap}
+.you{color:#9fc7ff}.jarvis{color:#78f5ff}
+input,select{background:#020b14;color:white;border:1px solid #24758c;
+ padding:12px;border-radius:7px;font-size:14px}
+.controls{display:flex;gap:7px;margin-top:12px}
+.controls input{flex:1;min-width:0}
+button{background:#06364d;color:#e5fbff;border:1px solid #36dfff;
+ padding:11px 13px;border-radius:7px;font-weight:bold;margin:3px}
+button:active{background:#08718b}
+.actions{display:flex;flex-wrap:wrap;margin-top:10px}
+.task{padding:8px;border-bottom:1px solid #16465b;font-size:14px}
+.done{text-decoration:line-through;color:#78a0a8}
+.small{font-size:12px;color:#8ab9c8}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>J.A.R.V.I.S 3.1</h1>
+<div class="status" id="status">● SYSTEM ONLINE</div>
+</header>
+
+<div class="core">
+<div class="arc"><span>JARVIS</span></div>
+</div>
+
+<section class="panel">
+<h2>COMMUNICATION INTERFACE</h2>
+<div id="chat" aria-live="polite">
+<p class="msg jarvis">JARVIS: Hello Sir! Main ready hoon. Aap mujhse baat kar sakte hain.</p>
+</div>
+
+<div class="controls">
+<input id="command" placeholder="Type your command...">
+<button onclick="send()">SEND</button>
+</div>
+
+<div class="actions">
+<button onclick="listen()">🎙 SPEAK</button>
+<button onclick="testVoice()">🔊 TEST VOICE</button>
+<button onclick="stopVoice()">■ STOP VOICE</button>
+</div>
+
+<p class="small">Voice language:</p>
+<select id="language">
+<option value="auto">Automatic</option>
+<option value="hi-IN">Hindi</option>
+<option value="en-IN">English</option>
+</select>
+</section>
+
+<section class="panel">
+<h2>MY TASKS</h2>
+<div id="tasks"></div>
+<p class="small">Commands: add task study physics | show tasks | complete task 1 | clear completed</p>
+</section>
+
+<section class="panel">
+<h2>SYSTEM MODULES</h2>
+<p>◈ Voice output: <span style="color:#74ffcf">READY</span></p>
+<p>◈ Voice input: <span id="micStatus">CHECKING</span></p>
+<p>◈ Task memory: <span style="color:#74ffcf">ACTIVE</span></p>
+<p>◈ AI Brain: <span style="color:#ffcc70">NOT CONNECTED</span></p>
+<p class="small">AI connection will be added separately through a secure backend.</p>
+</section>
+</div>
+
+<script>
+const chat=document.getElementById("chat");
+const input=document.getElementById("command");
+let tasks=JSON.parse(localStorage.getItem("jarvisTasks")||"[]");
+
+function message(who,text){
+ let p=document.createElement("p");
+ p.className="msg "+(who==="YOU"?"you":"jarvis");
+ let b=document.createElement("b");
+ b.textContent=who+": ";
+ p.appendChild(b);
+ p.appendChild(document.createTextNode(text));
+ chat.appendChild(p);
+ chat.scrollTop=chat.scrollHeight;
+}
+
+function speak(text,lang){
+ if(!window.speechSynthesis){
+  document.getElementById("status").textContent="SPEECH NOT SUPPORTED";
+  return;
+ }
+ window.speechSynthesis.cancel();
+ let utter=new SpeechSynthesisUtterance(text);
+ let selected=document.getElementById("language").value;
+ utter.lang=selected==="auto"?(lang||"en-IN"):selected;
+ utter.rate=0.92;
+ utter.pitch=1;
+ let voices=window.speechSynthesis.getVoices();
+ let voice=voices.find(v=>v.lang.toLowerCase().startsWith(utter.lang.toLowerCase()));
+ if(voice)utter.voice=voice;
+ utter.onstart=()=>document.getElementById("status").textContent="● SPEAKING";
+ utter.onend=()=>document.getElementById("status").textContent="● SYSTEM ONLINE";
+ utter.onerror=()=>document.getElementById("status").textContent="● VOICE ERROR";
+ window.speechSynthesis.speak(utter);
+}
+
+function reply(text,lang){
+ message("JARVIS",text);
+ speak(text,lang);
+}
+
+function saveTasks(){
+ localStorage.setItem("jarvisTasks",JSON.stringify(tasks));
+ showTasks();
+}
+
+function showTasks(){
+ let area=document.getElementById("tasks");
+ area.innerHTML="";
+ if(!tasks.length){
+  area.textContent="No tasks added yet.";
+  return;
+ }
+ tasks.forEach((t,i)=>{
+  let div=document.createElement("div");
+  div.className="task"+(t.done?" done":"");
+  div.textContent=(i+1)+". "+t.name+(t.done?" ✓":"");
+  area.appendChild(div);
+ });
+}
+
+function handle(raw){
+ let q=raw.trim();
+ if(!q)return;
+ message("YOU",q);
+ let s=q.toLowerCase();
+ let hindi=/[\u0900-\u097F]/.test(q);
+ let lang=hindi?"hi-IN":"en-IN";
+
+ if(/^(hi|hello|hey|namaste|नमस्ते|हेलो)/i.test(s)){
+  reply(hindi?"नमस्ते सर! मैं आपकी मदद के लिए तैयार हूँ।":"Hello Sir! I am ready to help you.",lang);
+ }
+ else if(/time|समय|बजे/.test(s)){
+  let t=new Date().toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"});
+  reply(hindi?"सर, अभी समय "+t+" है।":"Sir, the current time is "+t+".",lang);
+ }
+ else if(/date|तारीख|दिनांक/.test(s)){
+  let d=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  reply(hindi?"आज की तारीख "+d+" है।":"Sir, today's date is "+d+".",lang);
+ }
+ else if(s.startsWith("add task")||s.startsWith("add a task")||s.startsWith("task add")){
+  let name=q.replace(/^(add a task|add task|task add)/i,"").trim();
+  if(name){tasks.push({name:name,done:false});saveTasks();reply("Task added successfully, Sir.",lang);}
+  else reply("Please tell me the task name.",lang);
+ }
+ else if(/show tasks|my tasks|मेरे टास्क|टास्क दिखाओ/.test(s)){
+  if(!tasks.length)reply("Sir, you have no tasks.",lang);
+  else reply("Sir, your tasks are: "+tasks.map((t,i)=>(i+1)+". "+t.name+(t.done?" completed":"")).join(". "),lang);
+ }
+ else if(/complete task|task complete/.test(s)){
+  let n=parseInt(s.match(/\d+/)?.[0]);
+  if(n>0&&n<=tasks.length){tasks[n-1].done=true;saveTasks();reply("Task "+n+" completed, Sir.",lang);}
+  else reply("Please give a valid task number.",lang);
+ }
+ else if(/clear completed|remove completed/.test(s)){
+  tasks=tasks.filter(t=>!t.done);saveTasks();reply("Completed tasks cleared, Sir.",lang);
+ }
+ else if(/help|commands|मदद/.test(s)){
+  reply("Sir, I can tell time and date, add tasks, show tasks, complete tasks and clear completed tasks. My AI brain is not connected yet.",lang);
+ }
+ else{
+  reply(hindi?"सर, यह कमांड अभी मेरी सूची में नहीं है। मेरा AI Brain अभी कनेक्ट नहीं है।":"Sir, this command is not available yet. My AI brain is not connected.",lang);
+ }
+}
+
+function send(){
+ let q=input.value;
+ input.value="";
+ handle(q);
+ input.focus();
+}
+input.addEventListener("keydown",e=>{if(e.key==="Enter")send();});
+
+function stopVoice(){
+ if(window.speechSynthesis)window.speechSynthesis.cancel();
+ document.getElementById("status").textContent="● SYSTEM ONLINE";
+}
+function testVoice(){
+ speak("Hello Sir. JARVIS voice system is working. Namaste Sir.","en-IN");
+}
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recognition=null;
+if(SR){
+ recognition=new SR();
+ recognition.lang="hi-IN";
+ recognition.interimResults=false;
+ recognition.onstart=()=>document.getElementById("status").textContent="● LISTENING";
+ recognition.onend=()=>document.getElementById("status").textContent="● SYSTEM ONLINE";
+ recognition.onresult=e=>handle(e.results[0][0].transcript);
+ recognition.onerror=()=>document.getElementById("status").textContent="● MIC ERROR";
+ document.getElementById("micStatus").textContent="AVAILABLE";
+}else{
+ document.getElementById("micStatus").textContent="BROWSER NOT SUPPORTED";
+}
+function listen(){
+ if(recognition){
+  try{recognition.start();}catch(e){}
+ }else{
+  reply("Sir, voice input is not supported in this browser.","en-IN");
+ }
+}
+showTasks();
+if(window.speechSynthesis)window.speechSynthesis.getVoices();
+</script>
+</body>
+</html>
