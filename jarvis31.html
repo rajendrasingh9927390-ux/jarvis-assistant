@@ -243,6 +243,41 @@ function listen(){
 }
 showTasks();
 if(window.speechSynthesis)window.speechSynthesis.getVoices();
+
+const oldHandle = handle;
+const oldReply = reply;
+let lastJarvisQuestion = "";
+
+handle = function(message) {
+  lastJarvisQuestion = message;
+  return oldHandle.apply(this, arguments);
+};
+
+reply = function(message, lang) {
+  if (
+    typeof message === "string" &&
+    message.includes("AI brain is not connected")
+  ) {
+    oldReply("Connecting to JARVIS AI...", lang);
+
+    fetch("https://fancy-darkness-b930.premrock0009.workers.dev/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: lastJarvisQuestion })
+    })
+    .then(r => r.json())
+    .then(data => {
+      oldReply(data.reply || data.error || "AI response unavailable.", lang);
+    })
+    .catch(() => {
+      oldReply("Sir, AI server connection failed.", lang);
+    });
+
+    return;
+  }
+
+  return oldReply.apply(this, arguments);
+};
 </script>
 </body>
 </html>
